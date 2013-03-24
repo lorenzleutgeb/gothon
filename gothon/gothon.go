@@ -53,11 +53,11 @@ func main() {
 	if err != nil { log.Fatal(err) }
 	if *verbose { log.Print("Using file \"", target, "\"") }
 
-	reader := pyc.Reader{bufio.NewReader(file)}
+	reader := pyc.Reader{*bufio.NewReader(file)}
 
 	var module pyc.Module
 	
-	reader.ReadExpected(&module)
+	module.Read(&reader)
 
 	file.Close()
 }
