@@ -1,9 +1,11 @@
 package gothon
 
-import ("container/list")
+import (
+	"container/list"
+)
 
 type Machine struct {
-   stack list.List
+	stack list.List
 }
 
 func HasArg(opcode byte) bool {

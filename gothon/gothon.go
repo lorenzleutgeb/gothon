@@ -1,6 +1,6 @@
 package main
 
-import ("flag" ; "log" ; "os" ; "encoding/binary" ; "bufio" ; "time" ; "fmt" ; "github.com/flowlo/gothon" ; "os/exec" ; "path" )
+import ("flag" ; "log" ; "os" ; "bufio" ; "fmt" ; "github.com/flowlo/gothon/pyc" ; "os/exec" ; "path" )
 
 var (
 	verbose = flag.Bool("v", false, "verbose. if set, gothon will tell you what is going on.")
@@ -53,38 +53,11 @@ func main() {
 	if err != nil { log.Fatal(err) }
 	if *verbose { log.Print("Using file \"", target, "\"") }
 
-	reader := bufio.NewReader(file)
+	reader := pyc.Reader{bufio.NewReader(file)}
 
-	var version, check, size uint16
-
-	binary.Read(reader, binary.LittleEndian, &version)
-	binary.Read(reader, binary.LittleEndian, &check)
-
-	if check != 0xa0d {
-		log.Fatalf("Second two bytes of magic number are incorrect (0x0a0d expected, 0x%x found)", check)
-	}
-
-	var stamp int32
-
-	binary.Read(reader, binary.LittleEndian, &stamp)
-
-	if *verbose { log.Print("Last modification: ", time.Unix(int64(stamp), 0)) }
-
-	binary.Read(reader, binary.LittleEndian, &size)
-
-	if *debug { log.Print("Claimed file size: ", size) }
-
-	var c byte
-
-	for {
-		c, err = reader.ReadByte()
-		if err != nil { log.Fatal(err) }
-		log.Print(gothon.GetMnemonic(c))
-		if gothon.HasArg(c) {
-			c, err = reader.ReadByte()
-			c, err = reader.ReadByte()
-		}
-	}
+	var module pyc.Module
+	
+	reader.ReadExpected(&module)
 
 	file.Close()
 }
