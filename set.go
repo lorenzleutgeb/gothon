@@ -1,4 +1,4 @@
-package pyc
+package gothon
 
 import (
 	"encoding/binary"

@@ -1,8 +1,7 @@
-package pyc
+package gothon
 
 import (
 	"bufio"
-	"reflect"
 	"log"
 )
 
@@ -31,10 +30,10 @@ func (reader *Reader) ReadObject() Object {
 /*	case 'S':
 		result := &StopIter{}
 	case '.'
-		result := &Ellipsis{}
-	case 'i'
-		result := &Int{}
-	case 'f'
+		result := &Ellipsis{} */
+	case 'i':
+		result = &Int{}
+/*	case 'f'
 		result := &Float{}
 	case 'g'
 		result := &BinaryFloat{}
@@ -54,28 +53,41 @@ func (reader *Reader) ReadObject() Object {
 		result = &Dictionary{}
 	case 'c':
 		result = &Code{}
-/*	case 'u'
-		result := &Unicode{}
-	case '?'
+	case 'u':
+		result = &String{}
+/*	case '?'
 		result := &Unknown{} */
 	case '<':
 		result = &Set{}
 /*	case '>'
 		result := &FrozenSet{} */
 	default:
-		log.Fatalf("Read unknown type specifier byte \"%x\"", c)
+		log.Fatalf("Read unknown type specifier byte \"%c\"", c)
 	}
-	
+	result.Read(reader)
 	return result
 }
 
-func (reader *Reader) ReadExpected(object Object) {
+func (reader *Reader) ReadTuple() *Tuple {
 	tmp := reader.ReadObject()
-
-	if reflect.TypeOf(tmp) == reflect.TypeOf(object) {
-		object.Read(reader)
-		return
+	if value, ok := tmp.(*Tuple) ; ok {
+		return value
 	}
+	return nil
+}
 
-	log.Fatalf("Failed type assertion. gothon.pyc.Reader.ReadExpected read %T  but expected %T", tmp, object)
+func (reader *Reader) ReadString() *String {
+	tmp := reader.ReadObject()
+	if value, ok := tmp.(*String) ; ok {
+		return value
+	}
+	return nil
+}
+
+func (reader *Reader) ReadCode() *Code {
+	tmp := reader.ReadObject()
+	if value, ok := tmp.(*Code) ; ok {
+		return value
+	}
+	return nil
 }

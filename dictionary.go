@@ -1,4 +1,4 @@
-package pyc
+package gothon
 
 type Dictionary map[Object]Object
 

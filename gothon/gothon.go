@@ -1,6 +1,16 @@
 package main
 
-import ("flag" ; "log" ; "os" ; "bufio" ; "fmt" ; "github.com/flowlo/gothon/pyc" ; "os/exec" ; "path" )
+import (
+	"flag"
+	"log"
+	"os"
+	"bufio"
+	"fmt"
+	"github.com/flowlo/gothon"
+	"os/exec"
+	"path"
+//	"encoding/json"
+)
 
 var (
 	verbose = flag.Bool("v", false, "verbose. if set, gothon will tell you what is going on.")
@@ -53,11 +63,18 @@ func main() {
 	if err != nil { log.Fatal(err) }
 	if *verbose { log.Print("Using file \"", target, "\"") }
 
-	reader := pyc.Reader{*bufio.NewReader(file)}
+	reader := gothon.Reader{*bufio.NewReader(file)}
 
-	var module pyc.Module
+	module := &gothon.Module{}
 	
 	module.Read(&reader)
+	
+/*	dump, err := json.Marshal(module)
+	if err != nil { log.Fatal(err) }
+	log.Printf("%s", dump) */
 
 	file.Close()
+	
+	machine := &gothon.Machine{}
+	machine.Execute(*module)
 }

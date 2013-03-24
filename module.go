@@ -1,22 +1,22 @@
-package pyc
+package gothon
 
 import (
 	"log"
 	"time"
-	"encoding/binary"
 	"container/list"
+	"encoding/binary"
 )
 
 type Module struct {
-	code Code
-	interns list.List
+	Code *Code
+	Interns list.List
 	mtime time.Time
-	size uint32
-	version uint16
+	Size uint32
+	Version uint16
 }
 
 func (module *Module) Read(reader *Reader) {
-	binary.Read(reader, binary.LittleEndian, &module.version)
+	binary.Read(reader, binary.LittleEndian, &module.Version)
 	var check uint16
 	binary.Read(reader, binary.LittleEndian, &check)
 
@@ -27,6 +27,6 @@ func (module *Module) Read(reader *Reader) {
 	var mtime int32
 	binary.Read(reader, binary.LittleEndian, &mtime)
 	module.mtime = time.Unix(int64(mtime), 0)
-	binary.Read(reader, binary.LittleEndian, &module.size)
-	reader.ReadExpected(&module.code)
+	binary.Read(reader, binary.LittleEndian, &module.Size)
+	module.Code = reader.ReadCode()
 }
