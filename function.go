@@ -7,3 +7,7 @@ type Function struct {
 
 func (function *Function) Read(reader *Reader) {
 }
+
+func (function *Function) String() string {
+	return "[func: " + function.Name.string + "]"
+}

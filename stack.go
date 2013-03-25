@@ -35,7 +35,11 @@ func (s *Stack) Pop() (value Object) {
 func (stack *Stack) String() string {
 	result := ""
 	for i := stack.top ; i != nil ; i = i.next {
-		result += fmt.Sprintf("%T", i.value) + " "
+		if stringy, ok := i.value.(interface{ String() string }) ; ok {
+			result += stringy.String() + " "
+		} else {
+			result += fmt.Sprintf("%T", i.value) + " "
+		}
 	}
 	return result
 }

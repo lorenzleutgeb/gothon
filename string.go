@@ -20,3 +20,7 @@ func (this *String) Read(reader *Reader) {
 func (this *String) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.string)
 }
+
+func (this *String) String() string {
+	return "\"" + this.string + "\""
+}

@@ -59,3 +59,7 @@ func (code *Code) Read(reader *Reader) {
 	binary.Read(reader, binary.LittleEndian, &code.Firstlineno)
 	code.Lnotab = reader.ReadString()
 }
+
+func (code *Code) String() string {
+	return "[code: " + code.Name.string + "]"
+}

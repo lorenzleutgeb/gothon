@@ -13,7 +13,7 @@ func HasArg(opcode byte) bool {
 }
 
 func (machine *Machine) Run(code Code, pc int) {
-	log.Printf("(%d) %d", len(code.Instructions), code.Instructions)
+	log.Printf("%s (%d) %d", code.Name.string, len(code.Instructions), code.Instructions)
 
 	pc = 0
 	var op, first, second byte
@@ -38,10 +38,24 @@ func (machine *Machine) Run(code Code, pc int) {
 			(*code.Consts)[first] = machine.stack.Pop()
 		case LOAD_NAME:
 			machine.stack.Push((*code.Consts)[first])
+		case LOAD_FAST:
+			machine.stack.Push((*code.Varnames)[first])
 		case MAKE_FUNCTION:
 			if fqn, ok := machine.stack.Pop().(*String) ; ok {
 				if code, ok := machine.stack.Pop().(*Code) ; ok {
-					machine.stack.Push(&Function{fqn, code})
+					result := &Function{fqn, code}
+					
+/*					if first > 0 { // TODO fix this. horribly ugly!
+						args := make(Tuple, int(first))
+			
+						for j := int(first) - 1; j > -1; j-- {
+							args[j] = machine.stack.Pop()
+						}
+						
+						result.Code.Varnames = &args
+					}
+*/		
+					machine.stack.Push(result)
 				}
 			}
 		case CALL_FUNCTION:
@@ -54,11 +68,14 @@ func (machine *Machine) Run(code Code, pc int) {
 			
 			// TODO Pop keyword parameters
 			
-			for j := 0; j < int(first); j++ {
-				machine.stack.Pop()
+			args := make(Tuple, int(first))
+			
+			for j := int(first) - 1; j > -1; j-- {
+				args[j] = machine.stack.Pop()
 			}
 			
 			if function, ok := machine.stack.Pop().(*Function) ; ok {
+				function.Code.Varnames = &args
 				machine.Run(*function.Code, 0)
 			}
 			
@@ -68,10 +85,16 @@ func (machine *Machine) Run(code Code, pc int) {
 					machine.stack.Push(&Int{a.int32 * b.int32})
 				}
 			}
-		default:
-			log.Printf("%-5d %-4d %-4d %-15s", op, first, second, mnemonic[op])
+		case BINARY_ADD: // TODO implement this for floats
+			if a, ok := machine.stack.Pop().(*Int) ; ok {
+				if b, ok := machine.stack.Pop().(*Int) ; ok {
+					machine.stack.Push(&Int{a.int32 + b.int32})
+				}
+			}
 		}
-		log.Printf("Stack after executing %s: %s", mnemonic[op], machine.stack)
+		if op != CALL_FUNCTION {
+			log.Printf("%-15s (%-3d) %-4d %-4d : %s", mnemonic[op], op, first, second, machine.stack)
+		}
 	}
 }
 
