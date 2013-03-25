@@ -1,11 +1,9 @@
 def f():
 	return 4
 
-def mul(x, y):
+def mul(x = 42, y = 1337):
 	return x * y
 
+f()
 
-import dis
-dis.dis(f)
-dis.dis(mul)
-
+mul(2, 5)

@@ -1,5 +1,9 @@
 package gothon
- 
+
+import (
+	"fmt"
+)
+
 type Stack struct {
 	top *Element
 	size int
@@ -26,4 +30,12 @@ func (s *Stack) Pop() (value Object) {
 		return
 	}
 	return nil
+}
+
+func (stack *Stack) String() string {
+	result := ""
+	for i := stack.top ; i != nil ; i = i.next {
+		result += fmt.Sprintf("%T", i.value) + " "
+	}
+	return result
 }
