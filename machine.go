@@ -2,6 +2,7 @@ package gothon
 
 import (
 	"log"
+	"fmt"
 )
 
 type Machine struct {
@@ -14,6 +15,7 @@ func HasArg(opcode byte) bool {
 
 func (machine *Machine) Run(code Code, pc int) {
 	log.Printf("%s (%d) %d", code.Name.string, len(code.Instructions), code.Instructions)
+	log.Printf("Names: %s", fmt.Sprintf("%s", (*code.Names)))
 
 	pc = 0
 	var op, first, second byte
@@ -28,14 +30,16 @@ func (machine *Machine) Run(code Code, pc int) {
 		} else {
 			first, second = 0, 0
 		}
-		
+
 		switch op {
 		case POP_TOP:
 			machine.stack.Pop()
 		case LOAD_CONST:
 			machine.stack.Push((*code.Consts)[first])
 		case STORE_NAME:
-			(*code.Consts)[first] = machine.stack.Pop()
+			log.Printf("Stack in STORE_NAME: %s", machine.stack)
+			//log.Printf("Target: %s", code.Names[first]);
+			(*code.Names)[first] = machine.stack.Pop()
 		case LOAD_NAME:
 			machine.stack.Push((*code.Consts)[first])
 		case LOAD_FAST:

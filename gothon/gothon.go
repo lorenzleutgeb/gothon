@@ -44,10 +44,10 @@ func main() {
 
 	if path.Ext(target) == ".py" {
 		_, err := exec.LookPath("python3.3")
-		if err != nil { log.Fatalf("If you want gothon to compile \"%s\", please install Python 3.3", path.Base(target)) }
+		if err != nil { log.Fatalf("If you want gothon to compile \"%s\", please install Python 3.3 (Could not find \"python3.3\")", path.Base(target)) }
 		if *debug { log.Print("Found Python 3.3") }
 
-		cmd := exec.Command("python3.3", "/usr/lib/python3.3/compileall.py", target)
+		cmd := exec.Command("python3.3", "-m", "compileall", target)
 		output, err := cmd.CombinedOutput()
 		if err != nil { log.Fatal("compileall: ", err) }
 		if len(output) > 0 && *debug { log.Print(string(output)) }
