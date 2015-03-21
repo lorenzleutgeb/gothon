@@ -5,7 +5,7 @@ type Function struct {
 	Code *Code
 }
 
-func (function *Function) Read(reader *Reader) {
+func (function *Function) Read(reader *Reader, t byte) {
 }
 
 func (function *Function) String() string {

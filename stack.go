@@ -5,19 +5,19 @@ import (
 )
 
 type Stack struct {
-	top *Element
+	top  *Element
 	size int
 }
- 
+
 type Element struct {
 	value Object
-	next *Element
+	next  *Element
 }
 
 func (s *Stack) Len() int {
 	return s.size
 }
- 
+
 func (s *Stack) Push(value Object) {
 	s.top = &Element{value, s.top}
 	s.size++
@@ -34,8 +34,10 @@ func (s *Stack) Pop() (value Object) {
 
 func (stack *Stack) String() string {
 	result := ""
-	for i := stack.top ; i != nil ; i = i.next {
-		if stringy, ok := i.value.(interface{ String() string }) ; ok {
+	for i := stack.top; i != nil; i = i.next {
+		if stringy, ok := i.value.(interface {
+			String() string
+		}); ok {
 			result += stringy.String() + " "
 		} else {
 			result += fmt.Sprintf("%T", i.value) + " "

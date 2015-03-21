@@ -3,7 +3,7 @@ package gothon
 type None struct {
 }
 
-func (none *None) Read(reader *Reader) {
+func (none *None) Read(reader *Reader, t byte) {
 	return
 }
 

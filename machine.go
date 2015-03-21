@@ -1,7 +1,6 @@
 package gothon
 
 import (
-	"log"
 	"fmt"
 )
 
@@ -13,19 +12,21 @@ func HasArg(opcode byte) bool {
 	return opcode > 89
 }
 
-func (machine *Machine) Run(code Code, pc int) {
-	log.Printf("%s (%d) %d", code.Name.string, len(code.Instructions), code.Instructions)
-	log.Printf("Names: %s", fmt.Sprintf("%s", (*code.Names)))
+func (machine *Machine) Run(code Code) Object {
+	fmt.Printf("\x1b[32;1m%s\x1b[0m\n", code.Name.string)
 
-	pc = 0
+	pc := 0
 	var op, first, second byte
-	
+
 	for pc < len(code.Instructions) {
 		op = code.Instructions[pc]
+
+		fmt.Printf("%-4d %-15s (%-3d) %-4d %-4d : %s\n", pc, opcode[op], op, first, second, machine.stack)
+
 		pc++
-		
+
 		if HasArg(op) {
-			first, second = code.Instructions[pc], code.Instructions[pc + 1]
+			first, second = code.Instructions[pc], code.Instructions[pc+1]
 			pc += 2
 		} else {
 			first, second = 0, 0
@@ -37,72 +38,129 @@ func (machine *Machine) Run(code Code, pc int) {
 		case LOAD_CONST:
 			machine.stack.Push((*code.Consts)[first])
 		case STORE_NAME:
-			log.Printf("Stack in STORE_NAME: %s", machine.stack)
-			//log.Printf("Target: %s", code.Names[first]);
 			(*code.Names)[first] = machine.stack.Pop()
 		case LOAD_NAME:
-			machine.stack.Push((*code.Consts)[first])
+			machine.stack.Push((*code.Names)[first])
 		case LOAD_FAST:
 			machine.stack.Push((*code.Varnames)[first])
 		case MAKE_FUNCTION:
-			if fqn, ok := machine.stack.Pop().(*String) ; ok {
-				if code, ok := machine.stack.Pop().(*Code) ; ok {
+			if fqn, ok := machine.stack.Pop().(*String); ok {
+				if code, ok := machine.stack.Pop().(*Code); ok {
 					result := &Function{fqn, code}
-					
-/*					if first > 0 { // TODO fix this. horribly ugly!
-						args := make(Tuple, int(first))
-			
-						for j := int(first) - 1; j > -1; j-- {
-							args[j] = machine.stack.Pop()
-						}
-						
-						result.Code.Varnames = &args
-					}
-*/		
 					machine.stack.Push(result)
 				}
 			}
 		case CALL_FUNCTION:
-			// first: The low byte of argc indicates the number of positional parameters,
-			// second: the high byte the number of keyword parameters.
-			// On the stack, the opcode finds the keyword parameters first.
-			// For each keyword argument, the value is on top of the key.
-			// Below the keyword parameters, the positional parameters are on the stack, with the right-most parameter on top.
-			// Below the parameters, the function object to call is on the stack. Pops all function arguments, and the function itself off the stack, and pushes the return value.
-			
-			// TODO Pop keyword parameters
-			
+			if second > 0 {
+				panic("Keyword parameters are not implemented.")
+			}
+
 			args := make(Tuple, int(first))
-			
+
 			for j := int(first) - 1; j > -1; j-- {
 				args[j] = machine.stack.Pop()
 			}
-			
-			if function, ok := machine.stack.Pop().(*Function) ; ok {
+
+			o := machine.stack.Pop()
+
+			if function, ok := o.(*Function); ok {
 				function.Code.Varnames = &args
-				machine.Run(*function.Code, 0)
+				machine.stack.Push(machine.Run(*function.Code))
+			} else if s, ok := o.(*String); ok {
+				if s.string == "print" { // print is built-in
+					for _, arg := range args {
+						fmt.Printf("\x1b[31;1m%+v\x1b[0m", arg)
+					}
+					fmt.Println()
+				} else if s.string == code.Name.string {
+					code.Varnames = &args
+					machine.stack.Push(machine.Run(code))
+				} else {
+					panic(fmt.Sprintf("Unknown function: %s", s))
+				}
 			}
-			
-		case BINARY_MULTIPLY: // TODO implement this for floats
-			if a, ok := machine.stack.Pop().(*Int) ; ok {
-				if b, ok := machine.stack.Pop().(*Int) ; ok {
+
+		case BINARY_MULTIPLY: // TODO(flowlo): implement this for floats
+			if a, ok := machine.stack.Pop().(*Int); ok {
+				if b, ok := machine.stack.Pop().(*Int); ok {
 					machine.stack.Push(&Int{a.int32 * b.int32})
 				}
 			}
-		case BINARY_ADD: // TODO implement this for floats
-			if a, ok := machine.stack.Pop().(*Int) ; ok {
-				if b, ok := machine.stack.Pop().(*Int) ; ok {
+		case BINARY_ADD: // TODO(flowlo): implement this for floats
+			if a, ok := machine.stack.Pop().(*Int); ok {
+				if b, ok := machine.stack.Pop().(*Int); ok {
 					machine.stack.Push(&Int{a.int32 + b.int32})
 				}
 			}
-		}
-		if op != CALL_FUNCTION {
-			log.Printf("%-15s (%-3d) %-4d %-4d : %s", mnemonic[op], op, first, second, machine.stack)
+		case RETURN_VALUE:
+			return machine.stack.Pop()
+
+		case LOAD_GLOBAL:
+			machine.stack.Push((*code.Names)[first])
+
+		case COMPARE_OP:
+			if right, ok := machine.stack.Pop().(*Int); ok {
+				if left, ok := machine.stack.Pop().(*Int); ok {
+					switch first {
+					case OP_LT:
+						if left.int32 < right.int32 {
+							machine.stack.Push(&True{})
+						} else {
+							machine.stack.Push(&False{})
+						}
+					case OP_LEQ:
+						if left.int32 <= right.int32 {
+							machine.stack.Push(&True{})
+						} else {
+							machine.stack.Push(&False{})
+						}
+
+					case OP_EQ:
+						if left.int32 == right.int32 {
+							machine.stack.Push(&True{})
+						} else {
+							machine.stack.Push(&False{})
+						}
+					case OP_GT:
+						if left.int32 > right.int32 {
+							machine.stack.Push(&True{})
+						} else {
+							machine.stack.Push(&False{})
+						}
+					case OP_GE:
+						if left.int32 >= right.int32 {
+							machine.stack.Push(&True{})
+						} else {
+							machine.stack.Push(&False{})
+						}
+					default:
+						panic("Comparison operator not implemented.")
+					}
+				}
+			}
+
+		case POP_JUMP_IF_FALSE:
+			o := machine.stack.Pop()
+
+			if _, ok := o.(*False); ok {
+				pc = int(first)
+			}
+
+		case BINARY_SUBTRACT: // TODO(flowlo): Implement this for floats
+			if right, ok := machine.stack.Pop().(*Int); ok {
+				if left, ok := machine.stack.Pop().(*Int); ok {
+					machine.stack.Push(&Int{left.int32 - right.int32})
+				}
+			}
+
+		default:
+			fmt.Println("\x1b[31;1mSKIPPED\x1b[0m")
 		}
 	}
+	return &Null{}
 }
 
 func (machine *Machine) Execute(module Module) {
 	machine.stack = new(Stack)
-	machine.Run(*module.Code, 0)
+	machine.Run(*module.Code)
 }

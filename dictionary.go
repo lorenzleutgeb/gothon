@@ -2,12 +2,14 @@ package gothon
 
 type Dictionary map[Object]Object
 
-func (this *Dictionary) Read(reader *Reader) {
+func (this *Dictionary) Read(reader *Reader, t byte) {
 	*this = make(map[Object]Object)
 
 	for {
 		key := reader.ReadObject()
-		if _, ok := key.(*Null) ; ok { break }
+		if _, ok := key.(*Null); ok {
+			break
+		}
 		value := reader.ReadObject()
 		(*this)[key] = value
 	}

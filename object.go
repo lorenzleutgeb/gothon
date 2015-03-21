@@ -1,6 +1,6 @@
 package gothon
 
 type Object interface {
-	Read(*Reader)
-//	MarshalJSON() (byte, error)
+	Read(*Reader, byte)
+	//	MarshalJSON() (byte, error)
 }

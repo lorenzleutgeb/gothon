@@ -6,4 +6,4 @@ def mul(x, y):
 
 f()
 
-mul(2, 5) + mul(4, 8)
+print(mul(2, 5) + mul(4, 8))
