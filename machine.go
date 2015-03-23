@@ -20,17 +20,16 @@ func (machine *Machine) Run(code Code) Object {
 
 	for pc < len(code.Instructions) {
 		op = code.Instructions[pc]
-
-		fmt.Printf("%-4d %-15s (%-3d) %-4d %-4d : %s\n", pc, opcode[op], op, first, second, machine.stack)
-
-		pc++
-
 		if HasArg(op) {
-			first, second = code.Instructions[pc], code.Instructions[pc+1]
+			first, second = code.Instructions[pc+1], code.Instructions[pc+2]
 			pc += 2
 		} else {
 			first, second = 0, 0
 		}
+
+		fmt.Printf("%-4d %-15s (%-3d) %-4d %-4d : %s\n", pc, opcode[op], op, first, second, machine.stack)
+
+		pc += 1
 
 		switch op {
 		case POP_TOP:
@@ -46,7 +45,10 @@ func (machine *Machine) Run(code Code) Object {
 		case MAKE_FUNCTION:
 			if fqn, ok := machine.stack.Pop().(*String); ok {
 				if code, ok := machine.stack.Pop().(*Code); ok {
-					result := &Function{fqn, code}
+					result := &Function{
+						Name: fqn,
+						Code: code,
+					}
 					machine.stack.Push(result)
 				}
 			}
@@ -153,6 +155,66 @@ func (machine *Machine) Run(code Code) Object {
 				}
 			}
 
+		case NOP:
+		case ROT_TWO:
+			a := machine.stack.Pop()
+			b := machine.stack.Pop()
+			machine.stack.Push(a)
+			machine.stack.Push(b)
+		case ROT_THREE:
+			a := machine.stack.Pop()
+			b := machine.stack.Pop()
+			c := machine.stack.Pop()
+			machine.stack.Push(b)
+			machine.stack.Push(a)
+			machine.stack.Push(c)
+		//case DUP_TOP:
+		//case DUP_TOP_TWO:
+		case UNARY_POSITIVE: // TODO(flowlo): Implement for floats
+			o := machine.stack.Pop()
+			if a, ok := o.(*Int); ok {
+				a.int32 = +a.int32
+			}
+		case UNARY_NEGATIVE: // TODO(flowlo): Implement for floats
+			o := machine.stack.Pop()
+			if a, ok := o.(*Int); ok {
+				a.int32 = -a.int32
+			}
+		case UNARY_NOT: // TODO(flowlo): Implement for floats
+			o := machine.stack.Pop()
+			if a, ok := o.(*Int); ok {
+				a.int32 = a.int32 // TODO
+			}
+		case UNARY_INVERT: // TODO(flowlo): Implement for floats
+			o := machine.stack.Pop()
+			if a, ok := o.(*Int); ok {
+				a.int32 = ^a.int32
+			}
+		case IMPORT_NAME:
+			name := (*code.Names)[first]
+			fromlist := machine.stack.Pop()
+			level := machine.stack.Pop()
+			fmt.Printf("import %s with %s and %s\n", name, fromlist, level)
+
+			if s, ok := name.(*String); ok {
+				if s.string == "sys" {
+					machine.stack.Push(NewSys())
+				}
+			}
+		case LOAD_ATTR:
+			name := (*code.Names)[first]
+			o := machine.stack.Pop()
+
+			ao, ok := o.(*Code)
+			if !ok {
+				panic(fmt.Sprintf("TypeError: %v of type %T has no attributes!", o, o))
+			}
+			a, err := ao.GetAttribute(name, nil)
+			if err != nil {
+				panic(err.Error())
+			}
+			machine.stack.Push(a)
+			//machine.stack.Push(&String{"NOT IMPLEMENTED"})
 		default:
 			fmt.Println("\x1b[31;1mSKIPPED\x1b[0m")
 		}

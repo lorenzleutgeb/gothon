@@ -1,6 +1,7 @@
 package gothon
 
 type Function struct {
+	AttributedObject
 	Name *String
 	Code *Code
 }

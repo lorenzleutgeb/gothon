@@ -2,9 +2,12 @@ package gothon
 
 import (
 	"encoding/binary"
+	"fmt"
+	"strconv"
 )
 
 type Code struct {
+	AttributedObject
 	Argcount       int32 // is the number of positional arguments (including arguments with default values)
 	Kwonlyargcount int32
 	Nlocals        int32 // is the number of local variables used by the function (including arguments)
@@ -61,12 +64,14 @@ func (code *Code) Read(reader *Reader, t byte) {
 }
 
 func (code *Code) String() string {
-	return "c:" + code.Name.string /*`
+	return "c:" + code.Name.string + `
 	code
-		file name:      `+code.Filename.string+`
-		object name:    `+code.Name.string+`
-		argument count: `+strconv.Itoa(int(code.Argcount))+`
-		locals:         `+strconv.Itoa(int(code.Nlocals))+`
-		stack size:     `+strconv.Itoa(int(code.Stacksize))+`
-		flags:          `+strconv.Itoa(int(code.Flags))*/
+		file name:      ` + code.Filename.string + `
+		object name:    ` + code.Name.string + `
+		argument count: ` + strconv.Itoa(int(code.Argcount)) + `
+		locals:         ` + strconv.Itoa(int(code.Nlocals)) + `
+		stack size:     ` + strconv.Itoa(int(code.Stacksize)) + `
+		flags:          ` + strconv.Itoa(int(code.Flags)) + `
+		varnames:       ` + fmt.Sprintf("%+v", (*code.Varnames)) + `
+		attributes:     ` + fmt.Sprintf("%+v", (code.AttributedObject.attr)) + "\n"
 }

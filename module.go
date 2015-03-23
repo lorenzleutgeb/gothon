@@ -8,6 +8,7 @@ import (
 )
 
 type Module struct {
+	AttributedObject
 	Code       *Code
 	Interns    list.List
 	mtime      time.Time
