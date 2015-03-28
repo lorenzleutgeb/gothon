@@ -204,7 +204,7 @@ func (frame *Frame) Run(code Code) Object {
 			o := frame.stack.Pop()
 
 			if _, ok := o.(*False); ok {
-				pc = int(first)
+				pc = int(first) + int(second) * 256
 			}
 
 		case BINARY_SUBTRACT: // TODO(flowlo): Implement this for floats
