@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/flowlo/gothon"
 	"log"
 	"os"
 	"os/exec"
 	"path"
+
+	"github.com/flowlo/gothon"
 	//	"encoding/json"
 )
 
@@ -89,6 +90,6 @@ func main() {
 
 	file.Close()
 
-	machine := &gothon.Machine{}
-	machine.Execute(*module)
+	frame := &gothon.Frame{}
+	frame.Execute(*module)
 }
