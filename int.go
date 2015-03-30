@@ -9,10 +9,10 @@ type Int struct {
 	int32
 }
 
-func (this *Int) Read(reader *Reader, t byte) {
-	binary.Read(reader, binary.LittleEndian, &this.int32)
+func (i *Int) Read(reader *Reader, t byte) {
+	binary.Read(reader, binary.LittleEndian, &i.int32)
 }
 
-func (this *Int) String() string {
-	return fmt.Sprintf("%d", this.int32)
+func (i *Int) String() string {
+	return fmt.Sprintf("%d", i.int32)
 }

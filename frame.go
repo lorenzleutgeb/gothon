@@ -7,34 +7,60 @@ import (
 	"strings"
 )
 
+// Frame is a code object in execution context.
+// It has a data stack and a block stack.
 type Frame struct {
-	stack  *Stack
-	blocks []Block
+	stack  []Object
+	blocks []block
+	code   *Code
 }
 
-type Block struct {
+type block struct {
 	start, end int
 }
 
-func HasArg(opcode byte) bool {
+func hasArg(opcode byte) bool {
 	return opcode > 89
 }
 
-func (frame *Frame) Run(code Code) Object {
-	fmt.Printf("\x1b[32;1m%s\x1b[0m\n", code.Name.string)
+// Push pushes an item to the stack associated
+// with the frame.
+func (f *Frame) Push(item Object) {
+	f.stack = append(f.stack, item)
+}
 
-	frame.blocks = make([]Block, 0)
+// Pop pops an item to the stack associated
+// with the frame.
+func (f *Frame) Pop() Object {
+	item := f.stack[len(f.stack)-1]
+	f.stack = f.stack[:len(f.stack)-1]
+	return item
+}
+
+// Peek gives you what's on top of the stack,
+// but does not remove the item.
+func (f *Frame) Peek() Object {
+	return f.stack[len(f.stack)-1]
+}
+
+// Execute brings the frame to execution. The attached
+// code will be executed starting at the first instruction
+// and interpreted.
+func (f *Frame) Execute() Object {
+	fmt.Printf("\x1b[32;1m%s\x1b[0m\n", f.code.Name.string)
+
+	f.blocks = make([]block, 0)
 
 	pc := 0
 	var op, first, second byte
 
-	for pc < len(code.Instructions) {
-		op = code.Instructions[pc]
+	for pc < len(f.code.Instructions) {
+		op = f.code.Instructions[pc]
 
 		fmt.Printf("\x1b[0;32m%4d %-17s", pc, opcode[op])
 
-		if HasArg(op) {
-			first, second = code.Instructions[pc+1], code.Instructions[pc+2]
+		if hasArg(op) {
+			first, second = f.code.Instructions[pc+1], f.code.Instructions[pc+2]
 			fmt.Printf(" %3d %3d", first, second)
 			pc += 2
 		} else {
@@ -42,7 +68,7 @@ func (frame *Frame) Run(code Code) Object {
 			fmt.Printf("        ")
 		}
 
-		fmt.Printf(" Ϟ %s\x1b[0m\n", frame.stack)
+		fmt.Printf(" Ϟ %s\x1b[0m\n", f.stack)
 
 		fmt.Printf("%d\n", pc%3)
 		//fmt.Printf("%d/%d - %x\n", pc, (len(code.Instructions)), md5.Sum(code.Instructions))
@@ -51,23 +77,23 @@ func (frame *Frame) Run(code Code) Object {
 
 		switch op {
 		case POP_TOP:
-			frame.stack.Pop()
+			f.Pop()
 		case LOAD_CONST:
-			frame.stack.Push((*code.Consts)[first])
+			f.Push((*f.code.Consts)[first])
 		case STORE_NAME:
-			(*code.Names)[first] = frame.stack.Pop()
+			(*f.code.Names)[first] = f.Pop()
 		case LOAD_NAME:
-			frame.stack.Push((*code.Names)[first])
+			f.Push((*f.code.Names)[first])
 		case LOAD_FAST:
-			frame.stack.Push((*code.Varnames)[first])
+			f.Push((*f.code.Varnames)[first])
 		case MAKE_FUNCTION:
-			if fqn, ok := frame.stack.Pop().(*String); ok {
-				if code, ok := frame.stack.Pop().(*Code); ok {
+			if fqn, ok := f.Pop().(*String); ok {
+				if code, ok := f.Pop().(*Code); ok {
 					result := &Function{
 						Name: fqn,
 						Code: code,
 					}
-					frame.stack.Push(result)
+					f.Push(result)
 				}
 			}
 		case CALL_FUNCTION:
@@ -78,14 +104,17 @@ func (frame *Frame) Run(code Code) Object {
 			args := make(Tuple, int(first))
 
 			for j := int(first) - 1; j > -1; j-- {
-				args[j] = frame.stack.Pop()
+				args[j] = f.Pop()
 			}
 
-			o := frame.stack.Pop()
+			o := f.Pop()
 
 			if function, ok := o.(*Function); ok {
 				function.Code.Varnames = &args
-				frame.stack.Push(frame.Run(*function.Code))
+
+				invoc := NewFrame(function.Code)
+
+				f.Push(invoc.Execute())
 			} else if s, ok := o.(*String); ok {
 				if s.string == "print" { // print is built-in
 					for _, arg := range args {
@@ -96,9 +125,10 @@ func (frame *Frame) Run(code Code) Object {
 						}
 					}
 					fmt.Println()
+					f.Push(&None{})
 				} else if s.string == "set" {
 					// TODO(flowlo): Implement iterating over args
-					frame.stack.Push(&Set{})
+					f.Push(&Set{})
 				} else if s.string == "input" {
 					if len(args) > 0 {
 						if str, ok := args[0].(*String); ok {
@@ -110,69 +140,70 @@ func (frame *Frame) Run(code Code) Object {
 					reader := bufio.NewReader(os.Stdin)
 					text, _ := reader.ReadString('\n')
 					text = strings.TrimRight(text, "\r\n")
-					frame.stack.Push(&String{text})
-				} else if s.string == code.Name.string {
-					code.Varnames = &args
-					frame.stack.Push(frame.Run(code))
+					f.Push(&String{text})
+				} else if s.string == f.code.Name.string { // Recursive call
+					invoc := NewFrame(f.code)
+					invoc.code.Varnames = &args
+					f.Push(invoc.Execute())
 				} else {
 					panic(fmt.Sprintf("Unknown function: %s", s))
 				}
 			}
 
 		case BINARY_MULTIPLY: // TODO(flowlo): implement this for floats
-			if a, ok := frame.stack.Pop().(*Int); ok {
-				if b, ok := frame.stack.Pop().(*Int); ok {
-					frame.stack.Push(&Int{a.int32 * b.int32})
+			if a, ok := f.Pop().(*Int); ok {
+				if b, ok := f.Pop().(*Int); ok {
+					f.Push(&Int{a.int32 * b.int32})
 				}
 			}
 		case BINARY_ADD: // TODO(flowlo): implement this for floats
-			if a, ok := frame.stack.Pop().(*Int); ok {
-				if b, ok := frame.stack.Pop().(*Int); ok {
-					frame.stack.Push(&Int{a.int32 + b.int32})
+			if a, ok := f.Pop().(*Int); ok {
+				if b, ok := f.Pop().(*Int); ok {
+					f.Push(&Int{a.int32 + b.int32})
 				}
 			}
 		case RETURN_VALUE:
-			return frame.stack.Pop()
+			return f.Pop()
 
 		case LOAD_GLOBAL:
-			frame.stack.Push((*code.Names)[first])
+			f.Push((*f.code.Names)[first])
 
 		case COMPARE_OP:
-			rightx := frame.stack.Pop()
-			leftx := frame.stack.Pop()
+			rightx := f.Pop()
+			leftx := f.Pop()
 			if right, ok := rightx.(*Int); ok {
 				if left, ok := leftx.(*Int); ok {
 					switch first {
 					case OP_LT:
 						if left.int32 < right.int32 {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 					case OP_LEQ:
 						if left.int32 <= right.int32 {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 
 					case OP_EQ:
 						if left.int32 == right.int32 {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 					case OP_GT:
 						if left.int32 > right.int32 {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 					case OP_GE:
 						if left.int32 >= right.int32 {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 					default:
 						panic("Comparison operator not implemented.")
@@ -182,15 +213,15 @@ func (frame *Frame) Run(code Code) Object {
 				if left, ok := leftx.(*String); ok {
 					if first == OP_EQ || first == OP_IS {
 						if left.string == right.string {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 					} else if first == OP_ISNT {
 						if left.string != right.string {
-							frame.stack.Push(&True{})
+							f.Push(&True{})
 						} else {
-							frame.stack.Push(&False{})
+							f.Push(&False{})
 						}
 					} else {
 						panic(fmt.Sprintf("Unimplemented operator: %d", int(first)))
@@ -201,68 +232,68 @@ func (frame *Frame) Run(code Code) Object {
 			}
 
 		case POP_JUMP_IF_FALSE:
-			o := frame.stack.Pop()
+			o := f.Pop()
 
 			if _, ok := o.(*False); ok {
-				pc = int(first) + int(second) * 256
+				pc = int(first) + int(second)*256
 			}
 
 		case BINARY_SUBTRACT: // TODO(flowlo): Implement this for floats
-			if right, ok := frame.stack.Pop().(*Int); ok {
-				if left, ok := frame.stack.Pop().(*Int); ok {
-					frame.stack.Push(&Int{left.int32 - right.int32})
+			if right, ok := f.Pop().(*Int); ok {
+				if left, ok := f.Pop().(*Int); ok {
+					f.Push(&Int{left.int32 - right.int32})
 				}
 			}
 
 		case NOP:
 		case ROT_TWO:
-			a := frame.stack.Pop()
-			b := frame.stack.Pop()
-			frame.stack.Push(a)
-			frame.stack.Push(b)
+			a := f.Pop()
+			b := f.Pop()
+			f.Push(a)
+			f.Push(b)
 		case ROT_THREE:
-			a := frame.stack.Pop()
-			b := frame.stack.Pop()
-			c := frame.stack.Pop()
-			frame.stack.Push(b)
-			frame.stack.Push(a)
-			frame.stack.Push(c)
+			a := f.Pop()
+			b := f.Pop()
+			c := f.Pop()
+			f.Push(b)
+			f.Push(a)
+			f.Push(c)
 		//case DUP_TOP:
 		//case DUP_TOP_TWO:
 		case UNARY_POSITIVE: // TODO(flowlo): Implement for floats
-			o := frame.stack.Pop()
+			o := f.Pop()
 			if a, ok := o.(*Int); ok {
 				a.int32 = +a.int32
 			}
 		case UNARY_NEGATIVE: // TODO(flowlo): Implement for floats
-			o := frame.stack.Pop()
+			o := f.Pop()
 			if a, ok := o.(*Int); ok {
 				a.int32 = -a.int32
 			}
 		case UNARY_NOT: // TODO(flowlo): Implement for floats
-			o := frame.stack.Pop()
+			o := f.Pop()
 			if a, ok := o.(*Int); ok {
-				a.int32 = a.int32 // TODO
+				a.int32 = ^a.int32
 			}
 		case UNARY_INVERT: // TODO(flowlo): Implement for floats
-			o := frame.stack.Pop()
+			o := f.Pop()
 			if a, ok := o.(*Int); ok {
 				a.int32 = ^a.int32
 			}
 		case IMPORT_NAME:
-			name := (*code.Names)[first]
-			fromlist := frame.stack.Pop()
-			level := frame.stack.Pop()
+			name := (*f.code.Names)[first]
+			fromlist := f.Pop()
+			level := f.Pop()
 			fmt.Printf("import %s with %s and %s\n", name, fromlist, level)
 
 			if s, ok := name.(*String); ok {
 				if s.string == "sys" {
-					frame.stack.Push(NewSys())
+					f.Push(NewSys())
 				}
 			}
 		case LOAD_ATTR:
-			name := (*code.Names)[first]
-			o := frame.stack.Pop()
+			name := (*f.code.Names)[first]
+			o := f.Pop()
 
 			ao, ok := o.(*Code)
 			if !ok {
@@ -272,15 +303,15 @@ func (frame *Frame) Run(code Code) Object {
 			if err != nil {
 				panic(err.Error())
 			}
-			frame.stack.Push(a)
-			//frame.stack.Push(&String{"NOT IMPLEMENTED"})
+			f.Push(a)
+			//f.Push(&String{"NOT IMPLEMENTED"})
 		case JUMP_ABSOLUTE:
 			pc = int(first)
 		case SETUP_LOOP:
-			block := &Block{pc, pc + int(first)}
-			frame.blocks = append(frame.blocks, *block)
+			block := &block{pc, pc + int(first)}
+			f.blocks = append(f.blocks, *block)
 		case POP_BLOCK:
-			frame.blocks = frame.blocks[:len(frame.blocks)-1]
+			f.blocks = f.blocks[:len(f.blocks)-1]
 		default:
 			fmt.Sprintf("\x1b[31;1mSkipped\x1b[0m unknown opcode: %d\n", op)
 			panic(fmt.Sprintf("Unknown opcode: %d", op))
@@ -289,7 +320,14 @@ func (frame *Frame) Run(code Code) Object {
 	return &Null{}
 }
 
-func (frame *Frame) Execute(module Module) {
-	frame.stack = new(Stack)
-	frame.Run(*module.Code)
+// NewFrame constructs a new Frame to execute the passed code. This
+// allocates memory for the execution stack and sets everything
+// up.
+func NewFrame(code *Code) *Frame {
+	f := new(Frame)
+	f.stack = make([]Object, code.Stacksize)
+	// TODO(flowlo): What's a good capacity here?
+	f.blocks = make([]block, 1)
+	f.code = code
+	return f
 }

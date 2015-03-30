@@ -4,6 +4,7 @@ import (
 	"runtime"
 )
 
+// NewSys constructs the sys module for Gothon.
 // Refer to https://docs.python.org/3.4/library/sys.html
 func NewSys() *Code {
 	sys := &Code{}

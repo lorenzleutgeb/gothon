@@ -2,8 +2,8 @@ package gothon
 
 type Dictionary map[Object]Object
 
-func (this *Dictionary) Read(reader *Reader, t byte) {
-	*this = make(map[Object]Object)
+func (dict *Dictionary) Read(reader *Reader, t byte) {
+	*dict = make(map[Object]Object)
 
 	for {
 		key := reader.ReadObject()
@@ -11,6 +11,6 @@ func (this *Dictionary) Read(reader *Reader, t byte) {
 			break
 		}
 		value := reader.ReadObject()
-		(*this)[key] = value
+		(*dict)[key] = value
 	}
 }

@@ -9,7 +9,7 @@ type String struct {
 	string
 }
 
-func (this *String) Read(reader *Reader, t byte) {
+func (s *String) Read(reader *Reader, t byte) {
 	var size int32
 	// short ASCII strings
 	if t == 'Z' || t == 'z' {
@@ -21,14 +21,14 @@ func (this *String) Read(reader *Reader, t byte) {
 	}
 	var result = make([]byte, size)
 	reader.Read(result)
-	this.string = string(result)
+	s.string = string(result)
 	//fmt.Printf("Just read string of length %d\n", size)
 }
 
-func (this *String) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.string)
+func (s *String) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.string)
 }
 
-func (this *String) String() string {
-	return "\"" + this.string + "\""
+func (s *String) String() string {
+	return "\"" + s.string + "\""
 }

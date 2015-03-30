@@ -36,7 +36,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var target string = flag.Args()[0]
+	target := flag.Args()[0]
 
 	if !path.IsAbs(target) {
 		pwd, _ := os.Getwd()
@@ -90,6 +90,6 @@ func main() {
 
 	file.Close()
 
-	frame := &gothon.Frame{}
-	frame.Execute(*module)
+	frame := gothon.NewFrame(module.Code)
+	frame.Execute()
 }
