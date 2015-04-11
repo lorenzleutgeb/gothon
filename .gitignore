@@ -26,3 +26,5 @@ _testmain.go
 
 # Python caches
 __pycache__
+
+benchmarksgame
