@@ -1,6 +1,8 @@
 package gothon
 
 import (
+	"container/list"
+	"os"
 	"runtime"
 )
 
@@ -14,5 +16,10 @@ func NewSys() *Code {
 	sys.AddAttribute("builtin_module_names", &Tuple{&String{"sys"}})
 	sys.AddAttribute("platform", &String{runtime.GOOS})
 	sys.AddAttribute("exit", &String{"Nope, you are not exiting."})
+	argList := list.New()
+	for _, arg := range os.Args {
+		argList.PushBack(arg)
+	}
+	sys.AddAttribute("argv", &List{*argList})
 	return sys
 }

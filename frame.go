@@ -10,7 +10,7 @@ import (
 // Frame is a code object in execution context.
 // It has a data stack and a block stack.
 type Frame struct {
-	stack  []Object
+	stack  []interface{}
 	blocks []block
 	code   *Code
 }
@@ -25,13 +25,13 @@ func hasArg(opcode byte) bool {
 
 // Push pushes an item to the stack associated
 // with the frame.
-func (f *Frame) Push(item Object) {
+func (f *Frame) Push(item interface{}) {
 	f.stack = append(f.stack, item)
 }
 
 // Pop pops an item to the stack associated
 // with the frame.
-func (f *Frame) Pop() Object {
+func (f *Frame) Pop() interface{} {
 	item := f.stack[len(f.stack)-1]
 	f.stack = f.stack[:len(f.stack)-1]
 	return item
@@ -39,7 +39,7 @@ func (f *Frame) Pop() Object {
 
 // Peek gives you what's on top of the stack,
 // but does not remove the item.
-func (f *Frame) Peek() Object {
+func (f *Frame) Peek() interface{} {
 	return f.stack[len(f.stack)-1]
 }
 
@@ -81,12 +81,19 @@ func (f *Frame) Execute() Object {
 		case LOAD_CONST:
 			f.Push((*f.code.Consts)[first])
 		case STORE_NAME:
-			(*f.code.Names)[first] = f.Pop()
+			if it, ok := f.Pop().(Object); ok {
+				(*f.code.Names)[first] = it
+			} else {
+				fmt.Println("STORE_NAME received non-Object, doing nothing.")
+			}
 		case LOAD_NAME:
 			f.Push((*f.code.Names)[first])
 		case LOAD_FAST:
 			f.Push((*f.code.Varnames)[first])
 		case MAKE_FUNCTION:
+			if int(first) > 0 {
+				panic("Cannot handle default parameters!")
+			}
 			if fqn, ok := f.Pop().(*String); ok {
 				if code, ok := f.Pop().(*Code); ok {
 					result := &Function{
@@ -104,7 +111,11 @@ func (f *Frame) Execute() Object {
 			args := make(Tuple, int(first))
 
 			for j := int(first) - 1; j > -1; j-- {
-				args[j] = f.Pop()
+				if it, ok := f.Pop().(Object); ok {
+					args[j] = it
+				} else {
+					fmt.Println("CALL_FUNCTION skipping non-Objet parameter.")
+				}
 			}
 
 			o := f.Pop()
@@ -163,7 +174,11 @@ func (f *Frame) Execute() Object {
 				}
 			}
 		case RETURN_VALUE:
-			return f.Pop()
+			if it, ok := f.Pop().(Object); ok {
+				return it
+			}
+			fmt.Println("RETURN_VALUE cannot handle non-Object, returning nil.")
+			return nil
 
 		case LOAD_GLOBAL:
 			f.Push((*f.code.Names)[first])
@@ -295,23 +310,68 @@ func (f *Frame) Execute() Object {
 			name := (*f.code.Names)[first]
 			o := f.Pop()
 
-			ao, ok := o.(*Code)
-			if !ok {
-				panic(fmt.Sprintf("TypeError: %v of type %T has no attributes!", o, o))
+			if set, ok := o.(*Set); ok {
+				if s, ok := name.(*String); ok {
+					if s.string == "add" {
+						f.Push(func() {
+							set = nil
+						})
+					}
+				}
+			} else {
+
+				ao, ok := o.(*Code)
+				if !ok {
+					panic(fmt.Sprintf("TypeError: %v of type %T has no attributes!", o, o))
+				}
+				a, err := ao.GetAttribute(name, nil)
+				if err != nil {
+					panic(err.Error())
+				}
+				f.Push(a)
 			}
-			a, err := ao.GetAttribute(name, nil)
-			if err != nil {
-				panic(err.Error())
-			}
-			f.Push(a)
 			//f.Push(&String{"NOT IMPLEMENTED"})
 		case JUMP_ABSOLUTE:
-			pc = int(first)
+			pc = int(first) + int(second)*256
 		case SETUP_LOOP:
 			block := &block{pc, pc + int(first)}
 			f.blocks = append(f.blocks, *block)
 		case POP_BLOCK:
 			f.blocks = f.blocks[:len(f.blocks)-1]
+		case BINARY_SUBSCR:
+			arg := f.Pop()
+
+			index, ok := arg.(*Int)
+
+			if !ok {
+				panic("Can only take integer subscript.")
+			}
+
+			tos := f.Pop()
+
+			list, ok := tos.(*List)
+
+			switch o := tos.(type) {
+			default:
+				panic(fmt.Sprintf("Can only take subscript of lists. (%T given)", o))
+			case *String:
+				if index.int32 < 0 {
+					index.int32 = int32(len(o.string)) + index.int32
+				}
+				f.Push(&String{string(o.string[int(index.int32)])})
+			}
+
+			_ = list
+			_ = index
+		case INPLACE_ADD:
+			left := f.Pop()
+			right := f.Pop()
+
+			if a, ok := right.(*String); ok {
+				if b, ok := left.(*String); ok {
+					f.Push(&String{a.string + b.string})
+				}
+			}
 		default:
 			fmt.Sprintf("\x1b[31;1mSkipped\x1b[0m unknown opcode: %d\n", op)
 			panic(fmt.Sprintf("Unknown opcode: %d", op))
@@ -325,7 +385,7 @@ func (f *Frame) Execute() Object {
 // up.
 func NewFrame(code *Code) *Frame {
 	f := new(Frame)
-	f.stack = make([]Object, code.Stacksize)
+	f.stack = make([]interface{}, code.Stacksize)
 	// TODO(flowlo): What's a good capacity here?
 	f.blocks = make([]block, 1)
 	f.code = code
