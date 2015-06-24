@@ -1,4 +1,4 @@
-package gothon
+package main
 
 const (
 	TYPE_NULL                 = '0'

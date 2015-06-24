@@ -1,4 +1,4 @@
-package gothon
+package main
 
 const (
 	OP_LT   = 1

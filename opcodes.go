@@ -1,4 +1,4 @@
-package gothon
+package main
 
 const (
 	POP_TOP                 = 1

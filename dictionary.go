@@ -1,4 +1,4 @@
-package gothon
+package main
 
 type Dictionary map[Object]Object
 
