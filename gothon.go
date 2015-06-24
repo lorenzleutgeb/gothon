@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	debug = flag.Bool("d", true, "debug. if set, gothon will tell precicesly what it is doing.")
+	debug   = flag.Bool("debug", false, "continuously print debug messages")
+	version = flag.Bool("version", false, "only print version and build information, exit immediately")
 )
 
 var Version string
@@ -33,6 +34,11 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if *version {
+		printVersion()
+		os.Exit(0)
+	}
 
 	if len(flag.Args()) == 0 {
 		repl()
@@ -137,8 +143,7 @@ print(marshal.dumps(compile("` + code + `", "<repl>", "exec")))
 
 // Loops over user input until EOF on standard input.
 func repl() {
-	fmt.Println("gothon " + Version + " (" + BuildTime + ")")
-	fmt.Println("[" + runtime.Version() + "]")
+	printVersion()
 	fmt.Println("Type \"copyright\" for more information.")
 
 	for {
@@ -175,4 +180,10 @@ func repl() {
 		frame := NewFrame(code)
 		frame.Execute()
 	}
+}
+
+// Prints version information to standard output.
+func printVersion() {
+	fmt.Println("gothon " + Version + " (" + BuildTime + ")")
+	fmt.Println("[" + runtime.Version() + "]")
 }
