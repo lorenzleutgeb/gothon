@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"runtime"
 	"strconv"
 )
@@ -146,8 +147,15 @@ func repl() {
 	printVersion()
 	fmt.Println("Type \"copyright\" for more information.")
 
+	var source []byte
+
 	for {
-		print(">>> ")
+		prompt := ">>> "
+		if len(source) > 0 {
+			prompt = "... "
+		}
+		print(prompt)
+
 		bio := bufio.NewReader(os.Stdin)
 		raw, _, err := bio.ReadLine()
 		if err != nil {
@@ -158,14 +166,25 @@ func repl() {
 			panic(err)
 		}
 
-		input := string(raw)
-
-		if input == "copyright" {
+		if bytes.Equal([]byte("copyright"), raw) {
 			fmt.Println("Copyright (c) 2015 Lorenz Leutgeb.")
 			continue
 		}
 
-		raw, err = compile(input)
+		// Check whether the last non-whitespace character
+		// is a backslash
+		continuation := regexp.MustCompile("\\\\(\\s+)?$")
+		loc := continuation.FindIndex(raw)
+
+		if loc == nil {
+			source = raw
+		} else {
+			source = append(source, raw[0:loc[0]]...)
+			continue
+		}
+
+		raw, err = compile(string(source))
+		source = make([]byte, 0)
 		if err != nil {
 			if _, ok := err.(*exec.ExitError); ok {
 				continue
