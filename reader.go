@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"os"
 )
 
 type Reader struct {
@@ -84,7 +85,10 @@ func (reader *Reader) ReadObject() Object {
 		/*	case '>'
 			result := &FrozenSet{} */
 	default:
-		panic(fmt.Sprintf("Reached bad type specifier '%c'", c))
+		// NOTE: Newline is here because we're right in the middle of
+		// short-printing all read types.
+		fmt.Fprintf(os.Stderr, "\nReached unimplemented or bad type specifier '%c'¸\n", c)
+		os.Exit(1)
 	}
 
 	// TODO(flowlo): Prevent references to null by checking here
