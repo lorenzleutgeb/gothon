@@ -58,11 +58,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	module := &Module{}
-	reader := Reader{*bufio.NewReader(file), *module}
-
-	module.Read(&reader, 0)
-
+	module := NewModule(bufio.NewReader(file))
 	frame := NewFrame(module.Code)
 	frame.Execute()
 }
@@ -192,11 +188,10 @@ func repl() {
 			panic(err)
 		}
 
-		module := &Module{}
-		reader := Reader{*bufio.NewReader(bytes.NewReader(raw)), *module}
-		code := reader.ReadCode()
+		reader := NewReader(*bufio.NewReader(bytes.NewReader(raw)))
+		code := reader.ReadObject().(Code)
 
-		frame := NewFrame(code)
+		frame := NewFrame(&code)
 		frame.Execute()
 	}
 }

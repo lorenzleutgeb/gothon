@@ -1,34 +1,80 @@
 package main
 
-const (
-	TYPE_NULL                 = '0'
-	TYPE_NONE                 = 'N'
-	TYPE_FALSE                = 'F'
-	TYPE_TRUE                 = 'T'
-	TYPE_STOPITER             = 'S'
-	TYPE_ELLIPSIS             = '.'
-	TYPE_INT                  = 'i'
-	TYPE_INT64                = 'I'
-	TYPE_FLOAT                = 'f'
-	TYPE_BINARY_FLOAT         = 'g'
-	TYPE_COMPLEX              = 'x'
-	TYPE_BINARY_COMPLEX       = 'y'
-	TYPE_LONG                 = 'l'
-	TYPE_STRING               = 's'
-	TYPE_INTERNED             = 't'
-	TYPE_STRINGREF            = 'R'
-	TYPE_OBREF                = 'r'
-	TYPE_TUPLE                = '('
-	TYPE_LIST                 = '['
-	TYPE_DICT                 = '{'
-	TYPE_CODE                 = 'c'
-	TYPE_CODE2                = 'C'
-	TYPE_UNICODE              = 'u'
-	TYPE_UNKNOWN              = '?'
-	TYPE_SET                  = '<'
-	TYPE_FROZENSET            = '>'
-	TYPE_ASCII                = 'a'
-	TYPE_SMALL_TUPLE          = ')'
-	TYPE_SHORT_ASCII          = 'z'
-	TYPE_SHORT_ASCII_INTERNED = 'Z'
+import (
+	"container/list"
+	"fmt"
 )
+
+type Null struct{}
+
+func (n Null) String() string {
+	return "null"
+}
+
+type None struct{}
+
+func (none None) String() string {
+	return "None"
+}
+
+type False struct {
+	bool
+}
+
+func (f False) String() string {
+	return "False"
+}
+
+type True struct {
+	bool
+}
+
+func (t True) String() string {
+	return "True"
+}
+
+type String struct {
+	string
+}
+
+func (s String) String() string {
+	return "\"" + s.string + "\""
+}
+
+type Tuple []Object
+
+func (t Tuple) String() string {
+	result := "<tuple"
+	for _, v := range t {
+		result = result + " " + v.String()
+	}
+	return result + ">"
+}
+
+type Dictionary map[Object]Object
+
+func (d Dictionary) String() string {
+	return "<dict>"
+}
+
+type Set map[Object]struct{}
+
+func (s Set) String() string {
+	return "<set>"
+}
+
+type Int struct {
+	int32
+}
+
+func (i Int) String() string {
+	return fmt.Sprintf("%d", i.int32)
+}
+
+type List struct {
+	list.List
+}
+
+func (l List) String() string {
+	return "<list>"
+}

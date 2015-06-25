@@ -1,0 +1,48 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+var builtin map[string]Object
+
+func init() {
+	builtin = map[string]Object{
+		"print": NewInternalFunction("print", func(args *args) Object {
+			if len(args.Keyword) > 0 {
+				panic("print() is not fancy")
+			}
+
+			s := make([]string, len(args.Positional))
+
+			for i, v := range args.Positional {
+				s[i] = v.String()
+			}
+
+			fmt.Println(strings.Join(s, " "))
+			return None{}
+		}),
+		"set": NewInternalFunction("set", func(args *args) Object {
+			if !args.IsEmpty() {
+				panic("set() with iterable not implemented")
+			}
+			return Set{}
+		}),
+		"abs": NewInternalFunction("abs", func(args *args) Object {
+			if len(args.Keyword) > 0 || len(args.Positional) != 1 {
+				return None{}
+			}
+			num := args.Positional[0]
+			switch t := num.(type) {
+			case Int:
+				if t.int32 < 0 {
+					return Int{-t.int32}
+				}
+			default:
+				panic("cannot take abs() of unknown type")
+			}
+			return num
+		}),
+	}
+}

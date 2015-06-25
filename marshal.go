@@ -1,6 +1,69 @@
 package main
 
 const (
+	CO_OPTIMIZED               = 0x00001
+	CO_NEWLOCALS               = 0x00002
+	CO_VARARGS                 = 0x00004
+	CO_VARKEYWORDS             = 0x00008
+	CO_NESTED                  = 0x00010
+	CO_GENERATOR               = 0x00020
+	CO_NOFREE                  = 0x00040
+	CO_GENERATOR_ALLOWED       = 0x01000
+	CO_FUTURE_DIVISION         = 0x02000
+	CO_FUTURE_ABSOLUTE_IMPORT  = 0x04000
+	CO_FUTURE_WITH_STATEMENT   = 0x08000
+	CO_FUTURE_PRINT_FUNCTION   = 0x10000
+	CO_FUTURE_UNICODE_LITERALS = 0x20000
+	CO_FUTURE_BARRY_AS_BDFL    = 0x40000
+)
+
+const (
+	OP_LT   = 1
+	OP_LEQ  = 2
+	OP_EQ   = 3
+	OP_GT   = 4
+	OP_GE   = 5
+	OP_NOT  = 6
+	OP_TRU  = 7
+	OP_IS   = 8
+	OP_ISNT = 9
+)
+
+const (
+	TYPE_NULL                 = '0'
+	TYPE_NONE                 = 'N'
+	TYPE_FALSE                = 'F'
+	TYPE_TRUE                 = 'T'
+	TYPE_STOPITER             = 'S'
+	TYPE_ELLIPSIS             = '.'
+	TYPE_INT                  = 'i'
+	TYPE_INT64                = 'I'
+	TYPE_FLOAT                = 'f'
+	TYPE_BINARY_FLOAT         = 'g'
+	TYPE_COMPLEX              = 'x'
+	TYPE_BINARY_COMPLEX       = 'y'
+	TYPE_LONG                 = 'l'
+	TYPE_STRING               = 's'
+	TYPE_INTERNED             = 't'
+	TYPE_STRINGREF            = 'R'
+	TYPE_OBREF                = 'r'
+	TYPE_TUPLE                = '('
+	TYPE_LIST                 = '['
+	TYPE_DICT                 = '{'
+	TYPE_CODE                 = 'c'
+	TYPE_CODE2                = 'C'
+	TYPE_UNICODE              = 'u'
+	TYPE_UNKNOWN              = '?'
+	TYPE_SET                  = '<'
+	TYPE_FROZENSET            = '>'
+	TYPE_ASCII                = 'a'
+	TYPE_ASCII_INTERNED       = 'A'
+	TYPE_SMALL_TUPLE          = ')'
+	TYPE_SHORT_ASCII          = 'z'
+	TYPE_SHORT_ASCII_INTERNED = 'Z'
+)
+
+const (
 	POP_TOP                 = 1
 	ROT_TWO                 = 2
 	ROT_THREE               = 3

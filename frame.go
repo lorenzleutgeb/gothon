@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strings"
 )
 
 // Frame is a code object in execution context.
@@ -13,6 +11,7 @@ type Frame struct {
 	stack  []Object
 	blocks []block
 	code   *Code
+	names  map[string]Object
 }
 
 type block struct {
@@ -80,51 +79,46 @@ func (f *Frame) Execute() Object {
 			fmt.Printf(" %s\x1b[0m\n", f.stack)
 		}
 
-		//fmt.Printf("%d/%d - %x\n", pc, (len(code.Instructions)), md5.Sum(code.Instructions))
-
 		pc++
 
 		switch op {
 		case POP_TOP:
 			f.Pop()
 		case LOAD_CONST:
-			f.Push((*f.code.Consts)[first])
+			f.Push(f.code.Consts[first])
 		case STORE_NAME:
-			(*f.code.Names)[first] = f.Pop()
+			f.code.Names[first] = f.Pop()
 		case LOAD_NAME:
-			f.Push((*f.code.Names)[first])
+			f.Push(f.code.Names[first])
 		case LOAD_FAST:
-			f.Push((*f.code.Varnames)[first])
+			f.Push(f.code.Varnames[first])
 		case MAKE_FUNCTION:
-			if fqn, ok := f.Pop().(*String); ok {
-				if code, ok := f.Pop().(*Code); ok {
-					result := &Function{
-						Name: fqn,
-						Code: code,
-					}
-					f.Push(result)
-				}
-			}
+			name := f.Pop().(String)
+			code := f.Pop().(Code)
+			f.Push(NewExternalFunction(name.string, &code))
 		case CALL_FUNCTION:
 			if second > 0 {
 				panic("Keyword parameters are not implemented.")
 			}
 
-			args := make(Tuple, int(first))
+			pos := make([]Object, int(first))
 
 			for j := int(first) - 1; j > -1; j-- {
-				args[j] = f.Pop()
+				pos[j] = f.Pop()
 			}
+
+			args := args{Positional: pos}
 
 			o := f.Pop()
 
-			if function, ok := o.(*Function); ok {
-				function.Code.Varnames = &args
+			if function, ok := o.(Function); ok {
+				f.Push(function.Call(&args))
+			} else {
+				fmt.Fprintf(os.Stderr, "%+v", o)
+				panic("unknown function call")
+			}
 
-				invoc := NewFrame(function.Code)
-
-				f.Push(invoc.Execute())
-			} else if s, ok := o.(*String); ok {
+			/*else if s, ok := o.(*String); ok {
 				if s.string == "print" { // print is built-in
 					for _, arg := range args {
 						if str, ok := arg.(*String); ok {
@@ -164,12 +158,12 @@ func (f *Frame) Execute() Object {
 					f.Push(&String{text})
 				} else if s.string == f.code.Name.string { // Recursive call
 					invoc := NewFrame(f.code)
-					invoc.code.Varnames = &args
+					invoc.code.Varnames = args
 					f.Push(invoc.Execute())
 				} else {
 					panic(fmt.Sprintf("Unknown function: %s", s))
 				}
-			}
+			}*/
 
 		case BINARY_MULTIPLY: // TODO(flowlo): implement this for floats
 			if a, ok := f.Pop().(*Int); ok {
@@ -187,7 +181,15 @@ func (f *Frame) Execute() Object {
 			return f.Pop()
 
 		case LOAD_GLOBAL:
-			f.Push((*f.code.Names)[first])
+			name := f.code.Names[first].(String).string
+
+			value, isBuiltin := builtin[name]
+
+			if isBuiltin {
+				f.Push(value)
+			} else {
+				panic("lookup of globals other than builtins not implemented")
+			}
 
 		case COMPARE_OP:
 			rightx := f.Pop()
@@ -302,7 +304,7 @@ func (f *Frame) Execute() Object {
 				a.int32 = ^a.int32
 			}
 		case IMPORT_NAME:
-			name := (*f.code.Names)[first]
+			name := f.code.Names[first]
 			fromlist := f.Pop()
 			level := f.Pop()
 			fmt.Printf("import %s with %s and %s\n", name, fromlist, level)
@@ -313,7 +315,7 @@ func (f *Frame) Execute() Object {
 				}
 			}
 		case LOAD_ATTR:
-			name := (*f.code.Names)[first]
+			name := f.code.Names[first]
 			o := f.Pop()
 
 			ao, ok := o.(*Code)
@@ -333,6 +335,9 @@ func (f *Frame) Execute() Object {
 			f.blocks = append(f.blocks, *block)
 		case POP_BLOCK:
 			f.blocks = f.blocks[:len(f.blocks)-1]
+		case STORE_FAST:
+			name := f.code.Varnames[int(first)].(String).string
+			f.names[name] = f.Pop()
 		default:
 			fmt.Sprintf("\x1b[31;1mSkipped\x1b[0m unknown opcode: %d\n", op)
 			panic(fmt.Sprintf("Unknown opcode: %d", op))
@@ -348,7 +353,8 @@ func NewFrame(code *Code) *Frame {
 	f := new(Frame)
 	f.stack = make([]Object, 0)
 	// TODO(flowlo): What's a good capacity here?
-	f.blocks = make([]block, 1)
+	f.blocks = make([]block, 0)
 	f.code = code
+	f.names = make(map[string]Object, 0)
 	return f
 }

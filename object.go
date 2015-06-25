@@ -5,8 +5,7 @@ import (
 )
 
 type Object interface {
-	Read(*Reader, byte)
-	//	MarshalJSON() (byte, error)
+	String() string
 }
 
 type AttributedObject struct {
@@ -42,8 +41,4 @@ func (ao *AttributedObject) AddAttribute(key string, value Object) {
 		ao.attr = make(map[string]Object)
 	}
 	ao.attr[key] = value
-}
-
-func (ao AttributedObject) Read(r *Reader, t byte) {
-	panic("AttributeObject.Read is a dummy!")
 }

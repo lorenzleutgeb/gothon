@@ -1,45 +1,51 @@
 package main
 
 import (
-	"container/list"
+	"bufio"
 	"encoding/binary"
-	"log"
 	"time"
 )
 
 type Module struct {
 	AttributedObject
 	Code       *Code
-	Interns    list.List
+	Interns    []*String
 	mtime      time.Time
 	Size       uint32
 	Version    uint16
 	References []*Object
 }
 
-func (module *Module) Read(reader *Reader, t byte) {
+func NewModule(br *bufio.Reader) (module *Module) {
+	module = new(Module)
+
 	module.References = make([]*Object, 0)
 
-	binary.Read(reader, binary.LittleEndian, &module.Version)
-	var check uint16
-	binary.Read(reader, binary.LittleEndian, &check)
-
-	if check != 0xa0d {
-		log.Fatalf("Second two bytes of magic number are incorrect (0x0a0d expected, 0x%x found)", check)
+	r := Reader{
+		*br,
+		module,
 	}
 
-	var mtime int32
-	binary.Read(reader, binary.LittleEndian, &mtime)
-	module.mtime = time.Unix(int64(mtime), 0)
-	//log.Printf("Last modified: %v", module.mtime)
-	binary.Read(reader, binary.LittleEndian, &module.Size)
-	module.Code = reader.ReadCode()
-}
+	binary.Read(&r, binary.LittleEndian, &module.Version)
 
-func (module *Module) AddReference(o Object) {
-	module.References = append(module.References, &o)
-}
+	if module.Version != 0x0cee {
+		panic("invalid version")
+	}
 
-func (module *Module) GetReference(index int) Object {
-	return *module.References[index]
+	var check uint16
+	binary.Read(&r, binary.LittleEndian, &check)
+
+	if check != 0x0a0d {
+		panic("invalid magic")
+	}
+
+	var rawMtime int32
+	binary.Read(&r, binary.LittleEndian, &rawMtime)
+	module.mtime = time.Unix(int64(rawMtime), 0)
+	binary.Read(&r, binary.LittleEndian, &module.Size)
+
+	code := r.ReadObject().(Code)
+	module.Code = &code
+
+	return module
 }
