@@ -10,5 +10,5 @@ func (function *Function) Read(reader *Reader, t byte) {
 }
 
 func (function *Function) String() string {
-	return "[func: " + function.Name.string + "]"
+	return "<funct \"" + function.Name.string + "\">"
 }

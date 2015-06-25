@@ -47,7 +47,9 @@ func (f *Frame) Peek() Object {
 // code will be executed starting at the first instruction
 // and interpreted.
 func (f *Frame) Execute() Object {
-	fmt.Printf("\x1b[32;1m%s\x1b[0m\n", f.code.Name.string)
+	if *debug {
+		fmt.Println()
+	}
 
 	f.blocks = make([]block, 0)
 
@@ -57,20 +59,27 @@ func (f *Frame) Execute() Object {
 	for pc < len(f.code.Instructions) {
 		op = f.code.Instructions[pc]
 
-		fmt.Printf("\x1b[0;32m%4d %-17s", pc, opcode[op])
+		if *debug {
+			fmt.Printf("\x1b[0;32m%4d %-17s", pc, opcode[op])
+		}
 
 		if hasArg(op) {
 			first, second = f.code.Instructions[pc+1], f.code.Instructions[pc+2]
-			fmt.Printf(" %3d %3d", first, second)
+			if *debug {
+				fmt.Printf(" %3d %3d", first, second)
+			}
 			pc += 2
 		} else {
 			first, second = 0, 0
-			fmt.Printf("        ")
+			if *debug {
+				fmt.Printf("        ")
+			}
 		}
 
-		fmt.Printf(" Ϟ %s\x1b[0m\n", f.stack)
+		if *debug {
+			fmt.Printf(" %s\x1b[0m\n", f.stack)
+		}
 
-		fmt.Printf("%d\n", pc%3)
 		//fmt.Printf("%d/%d - %x\n", pc, (len(code.Instructions)), md5.Sum(code.Instructions))
 
 		pc++
@@ -121,7 +130,13 @@ func (f *Frame) Execute() Object {
 						if str, ok := arg.(*String); ok {
 							fmt.Printf("%s", str.string)
 						} else {
-							fmt.Printf("\x1b[31;1mPrinting something that's not a string:\x1b[0m %+v", arg)
+							if *debug {
+								fmt.Print("\x1b[31;1m")
+							}
+							fmt.Printf("%+v", args[0])
+							if *debug {
+								fmt.Print("\x1b[0m")
+							}
 						}
 					}
 					fmt.Println()
@@ -134,7 +149,13 @@ func (f *Frame) Execute() Object {
 						if str, ok := args[0].(*String); ok {
 							fmt.Printf("%s", str.string)
 						} else {
-							fmt.Printf("\x1b[31;1mPrinting something that's not a string:\x1b[0m %+v", args[0])
+							if *debug {
+								fmt.Print("\x1b[31;1m")
+							}
+							fmt.Printf("%+v", args[0])
+							if *debug {
+								fmt.Print("\x1b[0m")
+							}
 						}
 					}
 					reader := bufio.NewReader(os.Stdin)
@@ -325,7 +346,7 @@ func (f *Frame) Execute() Object {
 // up.
 func NewFrame(code *Code) *Frame {
 	f := new(Frame)
-	f.stack = make([]Object, code.Stacksize)
+	f.stack = make([]Object, 0)
 	// TODO(flowlo): What's a good capacity here?
 	f.blocks = make([]block, 1)
 	f.code = code

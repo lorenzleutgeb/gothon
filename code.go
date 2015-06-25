@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"strconv"
+	"path"
 )
 
 type Code struct {
@@ -64,14 +64,5 @@ func (code *Code) Read(reader *Reader, t byte) {
 }
 
 func (code *Code) String() string {
-	return "c:" + code.Name.string + `
-	code
-		file name:      ` + code.Filename.string + `
-		object name:    ` + code.Name.string + `
-		argument count: ` + strconv.Itoa(int(code.Argcount)) + `
-		locals:         ` + strconv.Itoa(int(code.Nlocals)) + `
-		stack size:     ` + strconv.Itoa(int(code.Stacksize)) + `
-		flags:          ` + strconv.Itoa(int(code.Flags)) + `
-		varnames:       ` + fmt.Sprintf("%+v", (*code.Varnames)) + `
-		attributes:     ` + fmt.Sprintf("%+v", (code.AttributedObject.attr)) + "\n"
+	return fmt.Sprintf("<code \"%s\" \".../%s:%d\">", code.Name.string, path.Base(code.Filename.string), code.Firstlineno)
 }

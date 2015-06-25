@@ -22,12 +22,16 @@ func (reader *Reader) ReadObject() Object {
 
 	var result Object
 
-	fmt.Printf("\x1b[34;1m%c\x1b[0m", c&0x7f)
+	if *debug {
+		fmt.Printf("\x1b[34;1m%c\x1b[0m", c&0x7f)
+	}
 
 	if c == 'r' {
 		var index int32
 		binary.Read(reader, binary.LittleEndian, &index)
-		fmt.Printf("%d", index)
+		if *debug {
+			fmt.Printf("%d", index)
+		}
 		return reader.Module.GetReference(int(index))
 	}
 
@@ -94,7 +98,9 @@ func (reader *Reader) ReadObject() Object {
 	// TODO(flowlo): Prevent references to null by checking here
 	// before adding a reference
 	if c&0x80 != 0 {
-		fmt.Print("+")
+		if *debug {
+			fmt.Print("+")
+		}
 		reader.Module.AddReference(result)
 		//fmt.Printf("After adding reference %p: %+v\n", result, reader.Module)
 	}
