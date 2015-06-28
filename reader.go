@@ -8,11 +8,14 @@ import (
 	"log"
 )
 
+// Reader is an unmarshaler for CPython bytecode.
 type Reader struct {
 	bufio.Reader
 	module *Module
 }
 
+// ReadObject reads the next available object from the unterlying
+// reader.
 func (r *Reader) ReadObject() Object {
 	c, err := r.ReadByte()
 
@@ -207,6 +210,8 @@ func (r *Reader) readInt() (i Int) {
 	return
 }
 
+// NewReader allocates a new Reader with an empty module
+// (global scope)
 func NewReader(br bufio.Reader) Reader {
 	return Reader{
 		br,

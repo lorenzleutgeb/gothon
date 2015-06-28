@@ -20,7 +20,12 @@ var (
 	version = flag.Bool("version", false, "only print version and build information, exit immediately")
 )
 
+// Version is an arbitrary string that carries version information.
+// It will usually be a Git commit hash, or a semantic version.
 var Version string
+
+// BuildTime is set upon building gothon. It's a ISO-8601 formatted
+// timestamp.
 var BuildTime string
 
 func main() {
@@ -94,6 +99,7 @@ func resolve(target string) (file *os.File, err error) {
 // Takes some Python source code and compiles it by passing it
 // to an external Python compiler.
 func compile(code string) (output []byte, err error) {
+	// FIXME(flowlo): This is "vulnerable" to injections.
 	inject := `
 import marshal
 print(marshal.dumps(compile("` + code + `", "<repl>", "exec")))

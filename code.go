@@ -5,22 +5,20 @@ import (
 	"path"
 )
 
+// Code is a code object unmarshaled from CPython bytecode,
+// it holds executable instructions and additional metadata.
 type Code struct {
 	AttributedObject
 
-	PosArgCnt, // is the number of positional arguments (including arguments with default values)
-	KwArgCnt,
-	Nlocals, // is the number of local variables used by the function (including arguments)
-	Stacksize, // is the required stack size (including local variables)
-	Flags uint32 // is an integer encoding a number of flags for the interpreter:
-	// bit 0x04 is set if the function uses the *arguments syntax to accept an arbitrary number of positional arguments
-	// bit 0x08 is set if the function uses the **keywords syntax to accept arbitrary keyword arguments
-	// bit 0x20 is set if the function is a generator
-	// Future feature declarations (from __future__ import division) also use bits in co_flags to indicate whether a code object was compiled with a particular feature enabled: bit 0x2000 is set if the function was compiled with future division enabled; bits 0x10 and 0x1000 were used in earlier versions of Python.
+	PosArgCnt, // number of positional arguments (including arguments with default values)
+	KwArgCnt, // number of keyword arguments
+	Nlocals, // number of local variables used by the function (including arguments)
+	Stacksize, // required stack size (including local variables)
+	Flags uint32
 
-	Instructions []byte // is a string representing the sequence of bytecode instructions
+	Instructions []byte
 
-	Consts, // is a tuple containing the literals used by the bytecode. If a code object represents a function, the first item in consts is the documentation string of the function, or None if undefined.
+	Consts, // contains the literals used by the bytecode. If a code object represents a function, the first item in consts is the documentation string of the function, or None if undefined.
 	Names, // is a tuple containing the names used by the bytecode
 	Varnames, // is a tuple containing the names of the local variables (starting with the argument names)
 	Freevars, // is a tuple containing the names of free variables

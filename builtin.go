@@ -44,5 +44,8 @@ func init() {
 			}
 			return num
 		}),
+		"__import__": NewInternalFunction("__import__", func(args *args) Object {
+			panic("__import__() is not yet implemented")
+		}),
 	}
 }

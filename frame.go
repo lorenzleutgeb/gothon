@@ -91,7 +91,8 @@ func (f *Frame) Execute() Object {
 		case LOAD_NAME:
 			f.Push(f.code.Names[first])
 		case LOAD_FAST:
-			f.Push(f.code.Varnames[first])
+			name := f.code.Varnames[int(first)].(String).string
+			f.Push(f.names[name])
 		case MAKE_FUNCTION:
 			name := f.Pop().(String)
 			code := f.Pop().(Code)
@@ -113,73 +114,35 @@ func (f *Frame) Execute() Object {
 
 			if function, ok := o.(Function); ok {
 				f.Push(function.Call(&args))
+			} else if fname, ok := o.(String); ok {
+				value, isBuiltin := builtin[fname.string]
+
+				if isBuiltin {
+					f.Push(value)
+				} else {
+					panic("can only resolve named functions to builtins")
+				}
+
+				function := value.(Function)
+				f.Push(function.Call(&args))
 			} else {
 				fmt.Fprintf(os.Stderr, "%+v", o)
 				panic("unknown function call")
 			}
-
-			/*else if s, ok := o.(*String); ok {
-				if s.string == "print" { // print is built-in
-					for _, arg := range args {
-						if str, ok := arg.(*String); ok {
-							fmt.Printf("%s", str.string)
-						} else {
-							if *debug {
-								fmt.Print("\x1b[31;1m")
-							}
-							fmt.Printf("%+v", args[0])
-							if *debug {
-								fmt.Print("\x1b[0m")
-							}
-						}
-					}
-					fmt.Println()
-					f.Push(&None{})
-				} else if s.string == "set" {
-					// TODO(flowlo): Implement iterating over args
-					f.Push(&Set{})
-				} else if s.string == "input" {
-					if len(args) > 0 {
-						if str, ok := args[0].(*String); ok {
-							fmt.Printf("%s", str.string)
-						} else {
-							if *debug {
-								fmt.Print("\x1b[31;1m")
-							}
-							fmt.Printf("%+v", args[0])
-							if *debug {
-								fmt.Print("\x1b[0m")
-							}
-						}
-					}
-					reader := bufio.NewReader(os.Stdin)
-					text, _ := reader.ReadString('\n')
-					text = strings.TrimRight(text, "\r\n")
-					f.Push(&String{text})
-				} else if s.string == f.code.Name.string { // Recursive call
-					invoc := NewFrame(f.code)
-					invoc.code.Varnames = args
-					f.Push(invoc.Execute())
-				} else {
-					panic(fmt.Sprintf("Unknown function: %s", s))
-				}
-			}*/
-
 		case BINARY_MULTIPLY: // TODO(flowlo): implement this for floats
-			if a, ok := f.Pop().(*Int); ok {
-				if b, ok := f.Pop().(*Int); ok {
-					f.Push(&Int{a.int32 * b.int32})
+			if a, ok := f.Pop().(Int); ok {
+				if b, ok := f.Pop().(Int); ok {
+					f.Push(Int{a.int32 * b.int32})
 				}
 			}
 		case BINARY_ADD: // TODO(flowlo): implement this for floats
-			if a, ok := f.Pop().(*Int); ok {
-				if b, ok := f.Pop().(*Int); ok {
-					f.Push(&Int{a.int32 + b.int32})
+			if a, ok := f.Pop().(Int); ok {
+				if b, ok := f.Pop().(Int); ok {
+					f.Push(Int{a.int32 + b.int32})
 				}
 			}
 		case RETURN_VALUE:
 			return f.Pop()
-
 		case LOAD_GLOBAL:
 			name := f.code.Names[first].(String).string
 
@@ -190,84 +153,79 @@ func (f *Frame) Execute() Object {
 			} else {
 				panic("lookup of globals other than builtins not implemented")
 			}
-
 		case COMPARE_OP:
 			rightx := f.Pop()
 			leftx := f.Pop()
-			if right, ok := rightx.(*Int); ok {
-				if left, ok := leftx.(*Int); ok {
+			if right, ok := rightx.(Int); ok {
+				if left, ok := leftx.(Int); ok {
 					switch first {
 					case OP_LT:
 						if left.int32 < right.int32 {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 					case OP_LEQ:
 						if left.int32 <= right.int32 {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 
 					case OP_EQ:
 						if left.int32 == right.int32 {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 					case OP_GT:
 						if left.int32 > right.int32 {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 					case OP_GE:
 						if left.int32 >= right.int32 {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 					default:
-						panic("Comparison operator not implemented.")
+						panic("comparison operator not implemented.")
 					}
 				}
-			} else if right, ok := rightx.(*String); ok {
-				if left, ok := leftx.(*String); ok {
+			} else if right, ok := rightx.(String); ok {
+				if left, ok := leftx.(String); ok {
 					if first == OP_EQ || first == OP_IS {
 						if left.string == right.string {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 					} else if first == OP_ISNT {
 						if left.string != right.string {
-							f.Push(&True{})
+							f.Push(True{})
 						} else {
-							f.Push(&False{})
+							f.Push(False{})
 						}
 					} else {
-						panic(fmt.Sprintf("Unimplemented operator: %d", int(first)))
+						panic(fmt.Sprintf("unimplemented operator: %d", int(first)))
 					}
 				}
 			} else {
-				panic(fmt.Sprintf("Cannot compare %T and %T", rightx, leftx))
+				panic(fmt.Sprintf("cannot compare %T and %T", rightx, leftx))
 			}
 
 		case POP_JUMP_IF_FALSE:
-			o := f.Pop()
-
-			if _, ok := o.(*False); ok {
+			if _, ok := f.Pop().(False); ok {
 				pc = int(first) + int(second)*256
 			}
-
 		case BINARY_SUBTRACT: // TODO(flowlo): Implement this for floats
 			if right, ok := f.Pop().(*Int); ok {
 				if left, ok := f.Pop().(*Int); ok {
 					f.Push(&Int{left.int32 - right.int32})
 				}
 			}
-
 		case NOP:
 		case ROT_TWO:
 			a := f.Pop()
@@ -281,8 +239,6 @@ func (f *Frame) Execute() Object {
 			f.Push(b)
 			f.Push(a)
 			f.Push(c)
-		//case DUP_TOP:
-		//case DUP_TOP_TWO:
 		case UNARY_POSITIVE: // TODO(flowlo): Implement for floats
 			o := f.Pop()
 			if a, ok := o.(*Int); ok {
@@ -309,11 +265,11 @@ func (f *Frame) Execute() Object {
 			level := f.Pop()
 			fmt.Printf("import %s with %s and %s\n", name, fromlist, level)
 
-			if s, ok := name.(*String); ok {
-				if s.string == "sys" {
-					f.Push(NewSys())
-				}
+			imp := builtin["__import__"].(Function)
+			arg := &args{
+				Positional: []Object{name},
 			}
+			f.Push(imp.Call(arg))
 		case LOAD_ATTR:
 			name := f.code.Names[first]
 			o := f.Pop()
@@ -327,7 +283,6 @@ func (f *Frame) Execute() Object {
 				panic(err.Error())
 			}
 			f.Push(a)
-			//f.Push(&String{"NOT IMPLEMENTED"})
 		case JUMP_ABSOLUTE:
 			pc = int(first)
 		case SETUP_LOOP:

@@ -8,6 +8,8 @@ type args struct {
 	Keyword    map[string]Object
 }
 
+// IsEmpty tells you whether this structure actually holds
+// any arguments (positional and keyword combined)
 func (a args) IsEmpty() bool {
 	return len(a.Positional)+len(a.Keyword) == 0
 }
