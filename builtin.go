@@ -49,16 +49,16 @@ func init() {
 		}),
 		"len": NewInternalFunction("len", func(args *args) Object {
 			res := len(args.Keyword) + len(args.Positional)
-			
-			return res
+			result = Int{res}
+			return result
 		}),
 		"sum": NewInternalFunction("sum", func(args *args) Object {
 			if len(args.Keyword) > 0 || len(args.Positional) < 1 {
 				panic("all need to be numbers to use sum()")
 			}
-			var sum int32 = 0
+			var sum := Int{0}
 			for _,v := range args.Positional {
-				sum += v.int32
+				sum.int32 += v
 			}
 
 			return sum
