@@ -47,5 +47,21 @@ func init() {
 		"__import__": NewInternalFunction("__import__", func(args *args) Object {
 			panic("__import__() is not yet implemented")
 		}),
+		"len": NewInternalFunction("len", func(args *args) Object {
+			res := len(args.Keyword) + len(args.Positional)
+			result = Int{res}
+			return result
+		}),
+		"sum": NewInternalFunction("sum", func(args *args) Object {
+			if len(args.Keyword) > 0 || len(args.Positional) < 1 {
+				panic("all need to be numbers to use sum()")
+			}
+			sum := Int{0}
+			for _,v := range args.Positional {
+				sum.int32 += v
+			}
+
+			return sum
+		}),
 	}
 }
