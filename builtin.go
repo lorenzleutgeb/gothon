@@ -58,7 +58,7 @@ func init() {
 			}
 			sum := Int{0}
 			for _,v := range args.Positional {
-				sum.int32 += v.int32
+				sum.int32 += int32(v)
 			}
 
 			return sum
