@@ -58,7 +58,12 @@ func init() {
 			}
 			sum := Int{0}
 			for _,v := range args.Positional {
-				sum.int32 += int32(v.String())
+				i, err := strconv.ParseInt(v.String(), 10, 32)
+				if err != nil {
+				    panic(err)
+				}
+				result := int32(i)
+				sum.int32 += result
 			}
 
 			return sum
