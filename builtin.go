@@ -49,7 +49,7 @@ func init() {
 		}),
 		"len": NewInternalFunction("len", func(args *args) Object {
 			res := len(args.Keyword) + len(args.Positional)
-			result = Int{res}
+			result := Int{int32(res)}
 			return result
 		}),
 		"sum": NewInternalFunction("sum", func(args *args) Object {
